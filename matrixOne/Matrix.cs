@@ -189,81 +189,137 @@ namespace matrixOne
         public void Step_three(Vector F)
         {
             double R = 0;
-            for (int i = k + 3; i < k; --i)
+            for (int i = k + 1; i <= k + 3; ++i)
             {
                 if (midD[i] == 0)
                 {
                     throw new Exception("Error, division by zero occurred. This equation can not be solved");
                 }
-                R = 1 / midD[i];
-                midD[i] *= R;
-                if (i == k + 3)
-                {
-                    lowerD[i] *= R;
-                    k2[i] *= R;
-                    F[i] *= R;
+                //идем снизу вверх
+                R = 1 / midD[k];
+                midD[k] = 1;
+                F[Columns - k + 1] *= R;
+                lowerD[k] *= R;
+                k2[k] *= R;
 
-                    R = -upperD[i];
-                    upperD[i] = 0;
-                    midD[i + 1] += lowerD[i] * R;
-                    lowerD[i + 1] += k2[i] * R;
-                    F[i - 1] += F[i] * R;
+                //обнуляем элементы над нижним левым
+                R = -upperD[k];
+                upperD[k] = 0;
+                midD[k + 1] += lowerD[k] * R;
+                lowerD[k + 1] += k2[k] * R;
+                F[Columns - k + 1 + 1] += F[Columns - k + 1] * R;
 
-                    R = -k1[i - 3];
-                    k1[i - 3] = 0;
-                    upperD[i + 1] += lowerD[i] * R;
-                    midD[i + 2] += k2[i] * R;
-                    F[i - 2] += F[i] * R;
-                }
-                //теперь столбик над элементом в левом нижнем углу нулевой, работаем со средним и правым
-                if (i == k + 2)
-                {
-                    upperD[i - 1] *= R;
-                    lowerD[i] *= R;
+                R = -k1[k - 1];
+                k1[k - 1] = 0;
+                upperD[k + 1] += lowerD[k] * R;
+                midD[k + 2] += k2[k] * R;
+                F[Columns - k + 1 + 2] += F[Columns - k + 1] * R;
 
-                    R = -upperD[i];
-                    upperD[i] = 0;
-                    midD[i + 1] += lowerD[i] * R;
-                    F[i - 1] += F[i] * R;
+                //теперь обнуляем элементы над и под центральным
+                R = 1 / midD[k + 1];
+                midD[k + 1] = 1;
+                lowerD[k + 1] *= R;
+                F[Columns - k + 1 + 1] *= R;
 
-                    R = -lowerD[i - 1];
-                    lowerD[i - 1] = 0;
-                    k2[i - 1] += lowerD[i] * R;
-                    F[i + 1] += F[i] * R;
-                }
-                //теперь средний столбик обнулился, поэтому просто обнуляем элементы под правым в верхнем углу
-                if (i == k + 1)
-                {
-                    lowerD[i - 1] = 0;
-                    k2[i - 2] = 0;
-                    F[i + 1] += F[i] * R;
-                    F[i + 2] += F[i] * R;
-                }
+                R = -upperD[k + 1];
+                upperD[k + 1] = 0;
+                midD[k + 2] += lowerD[k] * R;
+                F[Columns - k + 1 + 2] += F[Columns - k + 1 + 1] * R;
+
+                //обнуляем элементы под правым верхним
+                R = 1 / midD[k + 2];
+                midD[k + 2] = 1;
+                F[Columns - k + 1 + 2] *= R;
+                R = -lowerD[k + 1];
+                lowerD[k + 1] = 0;
+                F[Columns - k + 1 + 1] += F[Columns - k + 1 + 2] * R;
+                R = -k2[k];
+                k2[k] = 0;
+                F[Columns - k + 1] += F[Columns - k + 1 + 2] * R;
+
+                R = -lowerD[k];
+                lowerD[k] = 0;
+                F[Columns - k + 1] += F[Columns - k + 1 + 1] * R;
+
             }
         }
 
         //обнуляем k-й столбец
         public void Step_four(Vector F)
         {
-
+            double R;
+            for (int i = 1; i < k - 1; ++i)
+            {
+                if (k1[i] != 0)
+                {
+                    R = 1 / k1[i];
+                    k1[i] = 0;
+                    F[Columns - i + 1] += F[k] * R;
+                }
+            }
+            for (int i = k + 3; i <= Rows; ++i)
+            {
+                if (k1[i - 3] != 0)
+                {
+                    R = 1 / k1[i - 3];
+                    k1[i - 3] = 0;
+                    F[Columns - i + 1] += F[k] * R;
+                }
+            }
         }
 
         //обнуляем k + 2-й столбец
         public void Step_five(Vector F)
         {
-
+            double R;
+            for (int i = 1; i < k; ++i)
+            {
+                if (k2[i] != 0)
+                {
+                    R = 1 / k2[i];
+                    k2[i] = 0;
+                    F[Columns - i + 1] += F[k] * R;
+                }
+            }
+            for (int i = k + 3; i <= Rows; ++i)
+            {
+                if (k2[i - 3] != 0)
+                {
+                    R = 1 / k2[i - 3];
+                    k2[i - 3] = 0;
+                    F[Columns - i + 1] += F[k] * R;
+                }
+            }
         }
 
         //обнуляем кусок верхней диагонали до k + 2-го столбца
         public void Step_six(Vector F)
         {
-
+            double R;
+            for (int i = k + 2; i < Columns; ++i)
+            {
+                if (upperD[i] != 0)
+                {
+                    R = 1 / upperD[i];
+                    upperD[i] = 0;
+                    F[Columns - i + 1] += F[Columns - i + 2] * R;
+                }
+            }
         }
 
         //обнуляем кусок нижней диагонали до k + 1-го столбца
         public void Step_seven(Vector F)
         {
-
+            double R;
+            for (int i = 1; i < k; ++i)
+            {
+                if (lowerD[i] != 0)
+                {
+                    R = 1 / lowerD[i];
+                    lowerD[i] = 0;
+                    F[Columns - i + 1] += F[Columns - i] * R;
+                }
+            }
         }
 
         public void PrintAll(Vector res)
@@ -292,7 +348,8 @@ namespace matrixOne
             {
                 for (int j = 1; j <= Columns; ++j)
                 {
-                    Console.Write("{0:f3}", this[i, j] + " ");
+                    Console.Write("{0:f3}", this[i, j]);
+                    Console.Write(" ");
                 }
                 Console.WriteLine();
             }
