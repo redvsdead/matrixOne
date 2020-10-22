@@ -35,10 +35,20 @@ namespace matrixOne
         }
 
         //конструктор вектора заданной размерности
-        public Vector(int Size = 7)
+        public Vector(int Size = 8)
         {
             vector = new double[Size];
 
+        }
+
+        public Vector Reverse()
+        {
+            var res = new Vector(this.Size);
+            for (int i = 1; i <= Size; ++i)
+            {
+                res[i] = this[Size - i + 1];
+            }
+            return res;
         }
 
         //сложение векторов
