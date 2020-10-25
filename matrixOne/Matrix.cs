@@ -19,7 +19,7 @@ namespace matrixOne
         {            
             upperD = Vector.GenerateVector(_Size);
             midD = Vector.GenerateVector(_Size);
-            lowerD = Vector.GenerateVector(_Size);
+            lowerD = Vector.GenerateVector(_Size, false);
             k1 = Vector.GenerateVector(_Size);
             k2 = Vector.GenerateVector(_Size);
             k = random.Next(2, _Size - 3);

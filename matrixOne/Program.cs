@@ -62,6 +62,8 @@ namespace matrixOne
                     Console.WriteLine("\tN\t\tMax. error\t\tMean error");
                     for (i = 10; i <= 2000; i *= 2)
                     {
+                        maxError = 0;
+                        meanError = 0;
                         count = 0;
                         while (count < 5)
                         {

@@ -136,7 +136,7 @@ namespace matrixOne
                 }
                 else
                 {
-                    this[i] = random.Next(700, 1000);
+                    this[i] = random.Next(150);
                 }
             }
         }
