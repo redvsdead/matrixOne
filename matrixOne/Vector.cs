@@ -125,21 +125,27 @@ namespace matrixOne
         }
 
         //заполнение вектора случайными числами
-        public void FillVector()
+        public void FillVector(bool _good)
         {
             Random random = new Random();
             for (int i = 1; i <= Size; ++i)
             {
-                //this[i] = 1;
-                this[i] = random.Next(10);
+                if (_good)
+                {
+                    this[i] = random.Next(1, 10);
+                }
+                else
+                {
+                    this[i] = random.Next(700, 1000);
+                }
             }
         }
 
         //генерация рандомного вектора заданного размера
-        public static Vector GenerateVector(int d)
+        public static Vector GenerateVector(int d, bool _good = true)
         {
             Vector r = new Vector(d);
-            r.FillVector();
+            r.FillVector(_good);
             return r;
         }
 
@@ -158,7 +164,7 @@ namespace matrixOne
             Console.WriteLine();
         }
 
-        //вычисление точности для результирующих векторов задачи
+        //вычисление максимальной точности для результирующих векторов задачи
         public static double GetInaccuracy(Vector v1, Vector v2)
         {
             if (v1.Size != v2.Size)
@@ -167,6 +173,20 @@ namespace matrixOne
             for (int i = 2; i <= v1.Size; ++i)
                 if (Math.Abs(v1[i] - v2[i]) > res)
                     res = Math.Abs(v1[i] - v2[i]);
+            return res;
+        }
+
+        //вычисление средней точности для результирующих векторов задачи
+        public static double GetMeanInaccuracy(Vector v1, Vector v2)
+        {
+            if (v1.Size != v2.Size)
+                throw new Exception();
+            double res = Math.Abs(v1[1] - v2[1]);
+            for (int i = 2; i <= v1.Size; ++i)
+            {
+                res += Math.Abs(v1[i] - v2[i]);
+            }
+            res /= v1.Size;
             return res;
 
         }

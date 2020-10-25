@@ -15,31 +15,23 @@ namespace matrixOne
 
         static Random random = new Random();
 
-        public Matrix()
-        {
-            
-            upperD = Vector.GenerateVector(7);
-            midD = Vector.GenerateVector(8);
-            lowerD = Vector.GenerateVector(7);
-            k1 = Vector.GenerateVector(5);
-            k2 = Vector.GenerateVector(5);
-            /*
-            upperD = new Vector(new double[] { 6, 0, 2, 7, 5, 2, 1 });
-            midD = new Vector(new double[] { 6, 0, 2, 7, 5, 2, 1, 2 });
-            lowerD = new Vector(new double[] { 6, 0, 2, 7, 5, 2, 1 });
-            k1 = new Vector(new double[] { 6, 0, 2, 7, 5 });
-            k2 = new Vector(new double[] { 6, 0, 2, 7, 5 });
-            */
-            k = 3;
+        public Matrix(int _Size = 8)
+        {            
+            upperD = Vector.GenerateVector(_Size);
+            midD = Vector.GenerateVector(_Size);
+            lowerD = Vector.GenerateVector(_Size);
+            k1 = Vector.GenerateVector(_Size);
+            k2 = Vector.GenerateVector(_Size);
+            k = random.Next(2, _Size - 3);
         }
 
         public Matrix(int d, int k)
         {            
-            upperD = new Vector(d - 1);
+            upperD = new Vector(d);
             midD = new Vector(d);
-            lowerD = new Vector(d - 1);
-            k1 = new Vector(d - 3);
-            k2 = new Vector(d - 3);
+            lowerD = new Vector(d);
+            k1 = new Vector(d);
+            k2 = new Vector(d);
             this.k = k;
         }
 
@@ -49,13 +41,28 @@ namespace matrixOne
             {
                 throw new Exception("Could not multiply");
             }
-            Vector res = new Vector(m.Rows);
-            for (int i = 1; i <= m.Rows; ++i)
+            Vector res = new Vector(m.Columns);           
+            for (int i = 1; i <= m.Columns; ++i)
             {
-                res[m.Columns - i + 1] = 0;
-                for (int j = 1; j <= m.Columns; ++j)
+                res[i] = 0;
+                res[i] += m.midD[i] * v[i];
+                if (i > 1)
                 {
-                    res[m.Columns - i + 1] += m[i, j] * v[j];
+                    res[i] += m.upperD[i] * v[i - 1];
+                }
+                if (i < m.Columns)
+                {
+                    res[i] += m.lowerD[i] * v[i + 1];
+                }
+                //если вне границ пересечения с диагоналями
+                if (i < m.k - 1 || i > m.k + 1)
+                {
+                    res[i] += m.k1[i] * v[m.k];
+                }
+                //если вне границ пересечения с диагоналями
+                if (i < m. k + 1 || i > m.k + 2 + 1)
+                {
+                    res[i] += m.k2[i] * v[m.k + 2];
                 }
             }
             return res;
@@ -64,150 +71,167 @@ namespace matrixOne
         //обнуляем кусок верхней диагонали над основной до k - 1-го столбца включительно
         public void Step_one(Vector F)
         {
+            double R;
             for (int i = 1; i < k; ++i)
             {
                 if (midD[i] == 0)
                 {
                     throw new Exception("Error, division by zero occurred. This equation can not be solved");
                 }
-                //делаем кусок основной диагонали единичным и изменяем соседние элементны соответственно
-                double R = 1 / midD[i];
-                midD[i] *= R;
+                //делаем кусок побочной диагонали до k-го столбца единичным
+                R = 1 / midD[i];
+                midD[i] = 1;
                 lowerD[i] *= R;
-                F[i] *= R;
                 if (i > 1)
                 {
-                    upperD[i - 1] *= R;
+                    upperD[i] *= R;
                 }
-                if (i < k - 1)
+                if (i < k - 1 || i > k + 1)
                 {
                     k1[i] *= R;
-                    k2[i] *= R;
                 }
-                else
+                if (i < k + 1 || i > k + 2 + 1)
                 {
                     k2[i] *= R;
                 }
-                //теперь обнуляем диагональ выше
-                R = -upperD[i]; //индекс i, потому что в upperD хранятся элементы начиная с n - 1 строки для экономии памяти
-                upperD[i] = 0;
+                F[i] *= R;
+
+                //обнуляем верзнюю диагональ до k-го столбца
+                R = -upperD[i + 1];
+                upperD[i + 1] = 0;
                 midD[i + 1] += lowerD[i] * R;
-                F[i + 1] += F[i] * R;
-                if (i < k -2)
+                if (i + 1 < k - 1)
                 {
                     k1[i + 1] += k1[i] * R;
-                    k2[i + 1] += k2[i] * R;
                 }
-                else if (i == k - 2)
+                else if (i + 1 == k - 1)
                 {
                     lowerD[i + 1] += k1[i] * R;
-                    k2[i + 1] += k2[i] * R;
                 }
-                else
-                {
-                    k2[i + 1] += k2[i] * R;
-                }
+                //в этом случае столбец k + 2 нигде не пересечется с нижней диагональю, поэтому смело его меняем
+                k2[i + 1] += k2[i] * R;
+                F[i + 1] += F[i] * R;
             }
         }
 
-        //обнуляем кусок нижней диагонали до k - 3-го столбца включительно
+        //обнуляем кусок нижней диагонали до k + 3-го столбца включительно
         public void Step_two(Vector F)
         {
+            double R;
             for (int i = Columns; i > k + 2; --i)
             {
                 if (midD[i] == 0)
                 {
                     throw new Exception("Error, division by zero occurred. This equation can not be solved");
                 }
-                double R = 1 / midD[i];
+                //делаем кусок побочной диагонали до k + 3-го столбца единичным
+                R = 1 / midD[i];
                 midD[i] = 1;
-                upperD[i - 1] *= R;
-                F[i] *= R;
-                k1[i - 3] *= R;
-                if (i - k > 3)
+                upperD[i] *= R;
+                if (i < Columns)
                 {
-                    k2[i - 3] *= R;
+                    lowerD[i] *= R;
                 }
+                if (i < k - 1 || i > k + 1)
+                {
+                    k1[i] *= R;
+                }
+                if (i < k + 1 || i > k + 2 + 1)
+                {
+                    k2[i] *= R;
+                }
+                F[i] *= R;
+
+                //обнуляем верзнюю диагональ до k + 3-го столбца
                 R = -lowerD[i - 1];
                 lowerD[i - 1] = 0;
-                midD[i - 1] += upperD[i - 1] * R;
+                midD[i - 1] += upperD[i] * R;
+                //в этом случае столбец k нигде не пересечется с нижней диагональю, поэтому смело его меняем
+                k1[i - 1] += k1[i] * R;
+                //смотрим, пересечется ли с верхней диагональю k + 2-й столбец
+                if (i - 1 > k + 2 + 1)
+                {
+                    k2[i - 1] += k2[i] * R;
+                }
+                else if (i - 1 == k + 2 + 1)
+                {
+                    upperD[i - 1] += k2[i] * R;
+                }
                 F[i - 1] += F[i] * R;
-                k1[i - 3 - 1] += k1[i - 3] * R;
-                if (i - k > 4)
-                {
-                    k2[i - 3 - 1] += k2[i - 3] * R;
-                }
-                else if (i - k == 4)
-                {
-                    upperD[i - 2] += k2[i - 3] * R;
-                }
             }
         }
 
         //делаем единичным квадратик 3х3 внутри столбцов
         public void Step_three(Vector F)
         {
+            double R;
             if (midD[k] * midD[k + 1] * midD[k + 2] == 0)
             {
                 throw new Exception("Error, division by zero occurred. This equation can not be solved");
             }
 
-            double R;
+            //обнуляем столбец над нижним левым элементом
             R = 1 / midD[k];
             midD[k] = 1;
             lowerD[k] *= R;
             k2[k] *= R;
             F[k] *= R;
-            Console.WriteLine(R);
-            //работает            
-            R = -upperD[k];
-            upperD[k] = 0;
-            midD[k + 1] += lowerD[k] * R;
-            lowerD[k + 1] += k2[k] * R;
-            Console.WriteLine("F[k + 1] += F[k] * R: " + F[k + 1] + " " + F[k] + " " + R);
-            F[k + 1] += F[k] * R;
-            Console.WriteLine(F[k + 1]);
-            /* !!!!!!!!!!!!!!!!!!!!!*/
-            R = -k1[k - 1];
-            k1[k - 1] = 0;
-            upperD[k + 1] += midD[k + 1] * R;
-            midD[k + 2] += lowerD[k + 1] * R;
-            Console.WriteLine("F[k + 2] += F[k] * R: " + F[k + 2] + " " + F[k] + " " + R);
-            F[k + 2] += F[k] * R;
-            Console.WriteLine(F[k + 2]);/*
-            //работает
+            
+            if (upperD[k + 1] != 0)
+            {
+                R = -upperD[k + 1];
+                upperD[k + 1] = 0;
+                midD[k + 1] += lowerD[k] * R;
+                lowerD[k + 1] += k2[k] * R;
+                F[k + 1] += F[k] * R;
+            }
+            if (k1[k + 2] != 0)
+            {
+                R = -k1[k + 2];
+                k1[k + 2] = 0;
+                upperD[k + 2] += lowerD[k] * R;
+                midD[k + 2] += k2[k] * R;
+                F[k + 2] += F[k] * R;
+            }
+
+            //обнуляем элементны над и под центральным элементом
             R = 1 / midD[k + 1];
             midD[k + 1] = 1;
             lowerD[k + 1] *= R;
             F[k + 1] *= R;
 
-            //работает
-            R = -lowerD[k];
-            lowerD[k] = 0;
-            k2[k] += lowerD[k + 1] * R;
-            F[k] += F[k + 1] * R;
+            if (upperD[k + 2] != 0)
+            {
+                R = -upperD[k + 2];
+                upperD[k + 2] = 0;
+                midD[k + 2] += lowerD[k + 1] * R;
+                F[k + 2] += F[k + 1] * R;
+            }
+            if (lowerD[k] != 0)
+            {
+                R = -lowerD[k];
+                lowerD[k] = 0;
+                k2[k] += lowerD[k + 1] * R;
+                F[k] += F[k + 1] * R;
+            }
 
-            //работает
-            R = -upperD[k + 1];
-            upperD[k + 1] = 0;
-            midD[k + 2] += lowerD[k + 1] * R;
-            F[k + 2] += F[k + 1] * R;
-
-            //!!!!!!!!!!!!!!!!
+            //обнуляем столбец под правым верхним элементом
             R = 1 / midD[k + 2];
             midD[k + 2] = 1;
             F[k + 2] *= R;
 
-            ///!!!!!!!!!!!!!!!!!!!
-            R = -lowerD[k + 1];
-            lowerD[k + 1] = 0;
-            F[k + 1] += F[k + 2] * R;
-
-            //!!!!!!!!!!!!!!!!!!!
-            R = -k2[k];
-            k2[k] = 0;
-            F[k] += F[k + 2] * R;*/
-
+            if (lowerD[k + 1] != 0)
+            {
+                R = -lowerD[k + 1];
+                lowerD[k + 1] = 0;
+                F[k + 1] += F[k + 2] * R;
+            }
+            if (k2[k] != 0)
+            {
+                R = -k2[k];
+                k2[k] = 0;
+                F[k] += F[k + 2] * R;
+            }
         }
 
         //обнуляем k-й столбец
@@ -223,12 +247,12 @@ namespace matrixOne
                     F[i] += F[k] * R;
                 }
             }
-            for (int i = k + 3; i <= Rows; ++i)
+            for (int i = k + 2; i <= Columns; ++i)
             {
-                if (k1[i - 3] != 0)
+                if (k1[i] != 0)
                 {
-                    R = -k1[i - 3];
-                    k1[i - 3] = 0;
+                    R = -k1[i];
+                    k1[i] = 0;
                     F[i] += F[k] * R;
                 }
             }
@@ -238,7 +262,7 @@ namespace matrixOne
         public void Step_five(Vector F)
         {
             double R;
-            for (int i = 1; i < k; ++i)
+            for (int i = 1; i < k + 1; ++i)
             {
                 if (k2[i] != 0)
                 {
@@ -247,12 +271,12 @@ namespace matrixOne
                     F[i] += F[k + 2] * R;
                 }
             }
-            for (int i = k + 3; i <= Rows; ++i)
+            for (int i = k + 2 + 2; i <= Columns; ++i)
             {
-                if (k2[i - 3] != 0)
+                if (k2[i] != 0)
                 {
-                    R = -k2[i - 3];
-                    k2[i - 3] = 0;
+                    R = -k2[i];
+                    k2[i] = 0;
                     F[i] += F[k + 2] * R;
                 }
             }
@@ -264,10 +288,16 @@ namespace matrixOne
             double R;
             for (int i = k + 2; i < Columns; ++i)
             {
-                if (upperD[i] != 0)
+                if (midD[i] == 0)
                 {
-                    R = -upperD[i];
-                    upperD[i] = 0;
+                    throw new Exception("Error, division by zero occurred. This equation can not be solved");
+                }
+                //вся побочная диагональ к этому шагу уже единичная, поэтому
+                //просто обнуляем верхнюю диагональ до k + 1-го столбца
+                if (upperD[i + 1] != 0)
+                {
+                    R = -upperD[i + 1];
+                    upperD[i + 1] = 0;
                     F[i + 1] += F[i] * R;
                 }
             }
@@ -277,20 +307,47 @@ namespace matrixOne
         public void Step_seven(Vector F)
         {
             double R;
-            for (int i = 1; i < k; ++i)
+            for (int i = k; i > 1; --i)
             {
-                if (lowerD[i] != 0)
+                if (midD[i] == 0)
                 {
-                    R = -lowerD[i];
-                    lowerD[i] = 0;
-                    F[i] += F[i + 1] * R;
+                    throw new Exception("Error, division by zero occurred. This equation can not be solved");
+                }
+                //вся побочная диагональ к этому шагу уже единичная, поэтому
+                //просто обнуляем нижнюю диагональ до k + 1-го столбца
+                if (lowerD[i - 1] != 0)
+                {
+                    R = -lowerD[i - 1];
+                    lowerD[i - 1] = 0;
+                    F[i - 1] += F[i] * R;
                 }
             }
+        }
+
+        public void Solve(Vector resv)
+        {
+            Step_one(resv);
+            Step_two(resv);
+            Step_three(resv);
+            Step_four(resv);
+            Step_five(resv);
+            Step_six(resv);
+            Step_seven(resv);
+        }
+
+        public void Copy(Matrix m)
+        {
+            upperD = Vector.Copy(m.upperD);
+            midD = Vector.Copy(m.midD);
+            lowerD = Vector.Copy(m.lowerD);
+            k1 = Vector.Copy(m.k1);
+            k2 = Vector.Copy(m.k2);
         }
 
         public void PrintAll(Vector res)
         {
             PrintMatr();
+            Console.WriteLine("k: " + k);
             Console.Write("Upper diagonal: ");
             upperD.Print();
             Console.Write("Middle diagonal: ");
@@ -313,8 +370,8 @@ namespace matrixOne
             {
                 for (int j = 1; j <= Columns; ++j)
                 {
-                    Console.Write("{0:f3}", this[i, j]);
-                    Console.Write(" ");
+                    Console.Write("{0:f5}", this[i, j]);
+                    Console.Write("   ");
                 }
                 Console.WriteLine();
             }
@@ -328,20 +385,17 @@ namespace matrixOne
                     throw new Exception("Error, row index is out of range");
                 if (j > Columns || j <= 0)
                     throw new Exception("Error, column index is out of range");
-                if (i == Columns - j)       //например, [n - 1, 1] лежит на верхней диагонали
-                    return upperD[j];
-                if (i == Columns - j + 1)   //например, [n, 1] лежит на обратной диагонали
+                //если нет пересечения с диагоналями, выводим из колонок
+                if (j == k && (i < Columns - j || i > Columns - j + 2))
+                    return k1[Columns - i + 1];
+                if (j == k + 2 && (i < Columns - j || i > Columns - j + 2))
+                    return k2[Columns - i + 1];
+                if (i == Columns - j)       //например, [n - 1, 1] лежит на верхней диагонали и является 2-м элементом вектора
+                    return upperD[j + 1];
+                if (i == Columns - j + 1)   //например, [n, 1] лежит на обратной диагонали и является 1-м элементом вектора
                     return midD[j];
-                if (i == Columns - j + 2)    //например, [n, 2] лежит на нижней диагонали
+                if (i == Columns - j + 2)    //например, [n, 2] лежит на нижней диагонали и является 1-м элементом вектора
                     return lowerD[j - 1]; 
-                if (j == k && i > k + 1)
-                    return k1[Rows - i + 1];
-                if (j == k + 2 && i > k - 1)
-                    return k2[Rows - i + 1];
-                if (j == k && i <= k + 1)
-                    return k1[Rows - i - 3 + 1];
-                if (j == k + 2 && i <= k - 1)
-                    return k2[Rows - i - 3 + 1];
                 return 0;
             }
             set
@@ -350,20 +404,17 @@ namespace matrixOne
                     throw new Exception("Error, row index is out of range");
                 if (j > Columns || j <= 0)
                     throw new Exception("Error, column index is out of range");
+                //если нет пересечения с диагоналями, меняем значение в колонках
+                if (j == k && (i < Columns - j || i > Columns - j + 2))
+                    k1[Columns - i + 1] = value;
+                if (j == k + 2 && (i < Columns - j || i > Columns - j + 2))
+                    k2[Columns - i + 1] = value;
                 if (i == Columns - j)       //например, [n - 1, 1] лежит на верхней диагонали
-                    upperD[j] = value;
+                    upperD[i + 1] = value;
                 if (i == Columns - j + 1)   //например, [n, 1] лежит на обратной диагонали
                     midD[j] = value;
                 if (i == Columns - j + 2)    //например, [n, 2] лежит на нижней диагонали
                     lowerD[j - 1] = value;
-                if (j == k && i > k + 1)
-                    k1[Rows - i + 1] = value;
-                if (j == k + 2 && i > k - 1)
-                    k2[Rows - i + 1] = value;
-                if (j == k && i <= k + 1)
-                    k1[Rows - i - 3 + 1] = value;
-                if (j == k + 2 && i <= k - 1)
-                    k2[Rows - i - 3 + 1] = value;
             }
         }
     }
